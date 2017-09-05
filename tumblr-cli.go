@@ -1,8 +1,7 @@
-/**
- * https://www.tumblr.com/docs/en/api/v2
- */
+// tumblr-cli
+// see Tumblr API docs: https://www.tumblr.com/docs/en/api/v2
 
- package main
+package main
 
 import (
 	"fmt"
@@ -152,19 +151,9 @@ func main() {
 		os.Exit(0)
 
 	// delete a post
-	// tumblr-cli delte <blog> <id>
+	// tumblr-cli delete <blog> <id>
 	case "delete":
-
-		// BLOG
-		thisBlog = os.Args[2]
-
-		// API
-		requestURL := "https://api.tumblr.com/v2/blog/" + thisBlog + "/post/delete"
-
-		values := url.Values{}
-		values.Set("id", os.Args[3])
-
-		httpContents, err := doApiRequest("POST", requestURL, values)
+		httpContents, err := delete(os.Args[2], os.Args[3])
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR! can't read http response body | %v\n", err)
@@ -198,25 +187,22 @@ func main() {
 
 	// get info
 	case "info":
-		// BLOG
-		thisBlog = os.Args[2]
+		httpContents, err := info(os.Args[2]);
 
-		// API
-		requestURL := "https://api.tumblr.com/v2/blog/" + thisBlog + "/info"
-		httpContents, err := doApiRequest("GET", requestURL, url.Values{})
-				
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR! can't read http response body | %v\n", err)
+			fmt.Fprintf(os.Stderr, "ERROR! API request failed | %v\n", err)
 			os.Exit(1)
 		}
 
 		fmt.Println(string(httpContents))
 		os.Exit(0)
 
+	// get version
 	case "version":
-		fmt.Println("tumblr-cli verson 0.1.3 (2017-09-05)")
+		fmt.Println("tumblr-cli verson 0.1.4 (2017-09-05)")
 		os.Exit(0)
 
+	// debugging 
 	case "debug":
 		fmt.Println("debugging ...");
 		fmt.Println(os.Args[0]);
@@ -224,6 +210,7 @@ func main() {
 		fmt.Println(os.Args[2]);
 		os.Exit(0)
 
+	// no matching command
 	default:
 		fmt.Fprintf(os.Stderr, "ERROR! unknown command \""+os.Args[1]+"\"\n")
 		os.Exit(1)

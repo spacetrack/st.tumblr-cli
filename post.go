@@ -1,9 +1,5 @@
-/*
- * nigms-cli - nun-ist-genug-mit-schnee command line interface
- *
- * post
- *
- */
+// tumblr-cli
+// the Post struct
 
 package main
 
@@ -11,8 +7,6 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
-	//"fmt"
 )
 
 type Post struct {
