@@ -1,4 +1,8 @@
-package main
+/**
+ * https://www.tumblr.com/docs/en/api/v2
+ */
+
+ package main
 
 import (
 	"fmt"
@@ -15,8 +19,12 @@ func doApiRequest(method string, url string, values url.Values) ([]byte, error) 
 	contents, err := ioutil.ReadFile("CREDENTIALS")
 
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		contents, err = ioutil.ReadFile(".tumblr/CREDENTIALS")
+
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 
 	lines := strings.Split(string(contents), "\n")
@@ -81,7 +89,7 @@ func main() {
 	// create a new post
 	case "new", "create":
 		// [1] create
-		// [2} <BLOG>
+		// [2] <BLOG>
 		// [3] YYYY-MM-DDTHH:MM:SS
 		// [4] <TITLE>
 		// [5] <BODY>
@@ -122,6 +130,7 @@ func main() {
 
 		///* debug */ os.Exit(0)
 
+		// API
 		apiRequestURL := "https://api.tumblr.com/v2/blog/" + thisBlog + "/post"
 		apiValues := p.GetTumblrApiValues()
 
@@ -138,7 +147,8 @@ func main() {
 	// update existing posting:
 	// tumblr-cli update <blog> <id> <status> <time>
 	case "update":
-
+		// yet not implemented
+		fmt.Println("update yet not implemented")
 		os.Exit(0)
 
 	// delete a post
@@ -147,6 +157,8 @@ func main() {
 
 		// BLOG
 		thisBlog = os.Args[2]
+
+		// API
 		requestURL := "https://api.tumblr.com/v2/blog/" + thisBlog + "/post/delete"
 
 		values := url.Values{}
@@ -164,13 +176,17 @@ func main() {
 
 	// get list of draft posts
 	case "drafts", "posts":
+		// BLOG
+		thisBlog = os.Args[2]
+		
+		// API
 		requestURL := "https://api.tumblr.com/v2/blog/" + thisBlog + "/posts"
 
 		if os.Args[1] == "drafts" {
 			requestURL = requestURL + "/draft"
 		}
 
-		httpContents, err := doApiRequest("POST", requestURL, url.Values{})
+		httpContents, err := doApiRequest("GET", requestURL, url.Values{})
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR! can't read http response body | %v\n", err)
@@ -180,12 +196,32 @@ func main() {
 		fmt.Println(string(httpContents))
 		os.Exit(0)
 
+	// get info
+	case "info":
+		// BLOG
+		thisBlog = os.Args[2]
+
+		// API
+		requestURL := "https://api.tumblr.com/v2/blog/" + thisBlog + "/info"
+		httpContents, err := doApiRequest("GET", requestURL, url.Values{})
+				
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR! can't read http response body | %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Println(string(httpContents))
+		os.Exit(0)
+
 	case "version":
-		fmt.Println("tumblr-cli verson 0.1.1 (2017-02-01)")
+		fmt.Println("tumblr-cli verson 0.1.3 (2017-09-05)")
 		os.Exit(0)
 
 	case "debug":
-		// nothing
+		fmt.Println("debugging ...");
+		fmt.Println(os.Args[0]);
+		fmt.Println(os.Args[1]);
+		fmt.Println(os.Args[2]);
 		os.Exit(0)
 
 	default:
