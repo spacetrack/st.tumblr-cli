@@ -5,13 +5,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/kurrik/oauth1a"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/kurrik/oauth1a"
 )
 
 func doApiRequest(method string, url string, values url.Values) ([]byte, error) {
@@ -167,7 +168,7 @@ func main() {
 	case "drafts", "posts":
 		// BLOG
 		thisBlog = os.Args[2]
-		
+
 		// API
 		requestURL := "https://api.tumblr.com/v2/blog/" + thisBlog + "/posts"
 
@@ -187,7 +188,7 @@ func main() {
 
 	// get info
 	case "info":
-		httpContents, err := info(os.Args[2]);
+		httpContents, err := info(os.Args[2])
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR! API request failed | %v\n", err)
@@ -199,15 +200,15 @@ func main() {
 
 	// get version
 	case "version":
-		fmt.Println("tumblr-cli verson 0.1.4 (2017-09-05)")
+		fmt.Println("st-tumblr-cli verson 0.2.1 (2020-05-09)")
 		os.Exit(0)
 
-	// debugging 
+	// debugging
 	case "debug":
-		fmt.Println("debugging ...");
-		fmt.Println(os.Args[0]);
-		fmt.Println(os.Args[1]);
-		fmt.Println(os.Args[2]);
+		fmt.Println("debugging ...")
+		fmt.Println(os.Args[0])
+		fmt.Println(os.Args[1])
+		fmt.Println(os.Args[2])
 		os.Exit(0)
 
 	// no matching command
