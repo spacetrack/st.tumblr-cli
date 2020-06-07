@@ -1,0 +1,14 @@
+{
+    "name": "st.tumblr-cli.dev",
+    "dockerFile": "Dockerfile",
+    
+    "appPort": [
+        "8000:8000"
+    ],
+
+    "workspaceFolder": "/workspaces/st.tumblr-cli",
+
+    "extensions": [
+        "ms-vscode.go"
+    ]
+}
