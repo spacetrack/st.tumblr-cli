@@ -43,11 +43,11 @@ $ winpty docker exec -i -t st.tumblr-cli.dev sh -c 'go fmt && go run . version'
 $ winpty docker exec -i -t st.tumblr-cli.dev sh -c 'go fmt && go run . posts daily-passcode'
 $ winpty docker exec -i -t st.tumblr-cli.dev sh -c 'go fmt && go run . new daily-passcode 2019-12-24T15:00:00 "hello world b" "hello world t" "tag1,tag2,tag3"'
 
-# exec go build Windows
-$ winpty docker exec -i -t st.tumblr-cli.dev sh -c 'env GOOS=windows GOARCH=amd64 go build .'
+# exec go build for Windows
+$ winpty docker exec -i -t st.tumblr-cli.dev sh -c 'env GOOS=windows GOARCH=amd64 go build -o bin .'
 
-# exec go build RasPi
-$ winpty docker exec -i -t st.tumblr-cli.dev sh -c 'env GOOS=linux GOARCH=arm GOARM=5 go build .'
+# exec go build for RasPi
+$ winpty docker exec -i -t st.tumblr-cli.dev sh -c 'env GOOS=linux GOARCH=arm GOARM=5 go build -o bin/ .'
 
 
 ```
