@@ -4,22 +4,31 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/kurrik/oauth1a"
+	"github.com/tumblr/tumblrclient.go"
 )
 
-func doApiRequest(method string, url string, values url.Values) ([]byte, error) {
-	contents, err := ioutil.ReadFile("CREDENTIALS")
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("ERROR: please provide a command! Run \"tumblr-cli help\" for getting list of commands")
+		os.Exit(1)
+	}
+
+	// ----------------------------------------
+	// read credentials
+	//
+
+	fileContents, err := ioutil.ReadFile("CREDENTIALS")
 
 	if err != nil {
-		contents, err = ioutil.ReadFile(".tumblr/CREDENTIALS")
+		fileContents, err = ioutil.ReadFile(".tumblr/CREDENTIALS")
 
 		if err != nil {
 			fmt.Println(err)
@@ -27,55 +36,13 @@ func doApiRequest(method string, url string, values url.Values) ([]byte, error) 
 		}
 	}
 
-	lines := strings.Split(string(contents), "\n")
+	lines := strings.Split(string(fileContents), "\n")
 
-	service := &oauth1a.Service{
-		RequestURL:   "https://www.tumblr.com/oauth/request_token",
-		AuthorizeURL: "https://www.tumblr.com/oauth/authorize",
-		AccessURL:    "https://www.tumblr.com/oauth/access_token",
+	// ----------------------------------------
+	// init the tumblr client
+	//
 
-		ClientConfig: &oauth1a.ClientConfig{
-			ConsumerKey:    lines[0],
-			ConsumerSecret: lines[1],
-			CallbackURL:    "",
-		},
-
-		Signer: new(oauth1a.HmacSha1Signer),
-	}
-
-	httpClient := new(http.Client)
-	//userConfig := &oauth1a.UserConfig{}
-	//userConfig.GetRequestToken(service, httpClient)
-	//url, err := userConfig.GetAuthorizeURL(service)
-
-	userConfig := oauth1a.NewAuthorizedConfig(lines[2], lines[3])
-
-	httpRequest, err := http.NewRequest(method, url, strings.NewReader(values.Encode()))
-
-	if err != nil {
-		fmt.Println("ERROR: %s", err)
-		os.Exit(1)
-	}
-
-	httpRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	service.Sign(httpRequest, userConfig)
-	httpResponse, err := httpClient.Do(httpRequest)
-
-	if err != nil {
-		fmt.Println("ERROR: %s", err)
-		os.Exit(1)
-	}
-
-	defer httpResponse.Body.Close()
-
-	return ioutil.ReadAll(httpResponse.Body)
-}
-
-func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("ERROR: please provide a command! Run \"tumblr-cli help\" for getting list of commands")
-		os.Exit(1)
-	}
+	client := tumblrclient.NewClientWithToken(strings.TrimSpace(lines[0]), strings.TrimSpace(lines[1]), strings.TrimSpace(lines[2]), strings.TrimSpace(lines[3]))
 
 	var thisBlog string
 
@@ -88,12 +55,12 @@ func main() {
 
 	// create a new post
 	case "new", "create":
-		// [1] create
-		// [2] <BLOG>
-		// [3] YYYY-MM-DDTHH:MM:SS
-		// [4] <TITLE>
-		// [5] <BODY>
-		// [6] tags separated by comma
+		// [1] new | create
+		// [2] <BLOG_IDENTIFIER>
+		// [3] <YYYY-MM-DDTHH:MM:SS>
+		// [4] <BODY>
+		// [5] [<TITLE>]
+		// [6] [<TAG>[,<TAG>,[<TAG>]]]
 
 		p := Post{}
 
@@ -105,44 +72,48 @@ func main() {
 		p.Time, err = time.Parse("2006-01-02T15:04:05", os.Args[3])
 
 		if err != nil {
-			fmt.Println("tumblr-cli - Tumblr command line interface")
-			fmt.Println("command: " + os.Args[1])
-			fmt.Println("invalid timestamp format")
-			os.Exit(1)
+			panic(err)
 		}
 
-		// TITLE
-		p.Title = os.Args[4]
+		// BODY
+		p.Body = os.Args[4]
 
-		if len(os.Args) > 4 {
+		// TITLE
+		if len(os.Args) > 5 {
 			if len(os.Args[5]) > 0 {
-				p.Body = os.Args[5]
+				p.Title = os.Args[5]
 			}
 		}
 
-		if len(os.Args) > 5 {
+		// TAGS
+		if len(os.Args) > 6 {
 			if len(os.Args[6]) > 0 {
 				p.Tags = strings.Split(os.Args[6], ",")
 			}
 		}
 
-		fmt.Printf("sending data: %+v\n", p)
+		// the new API ".../posts" does not allow
+		// to set the date of the posting, so let's
+		// use the legacy API ".../post"
+		// (and ... we ditch the p variable ;-))
 
-		///* debug */ os.Exit(0)
+		r, err := client.GetHttpClient().Post("https://api.tumblr.com/v2/blog/"+thisBlog+"/post", "application/json", strings.NewReader(`{
+			"type": "text",
+			"date": "`+os.Args[3]+`",
+			"title": "`+os.Args[5]+`",
+			"body": "`+os.Args[4]+`",
+			"tags": "`+os.Args[6]+`"
+		}`))
 
-		// API
-		apiRequestURL := "https://api.tumblr.com/v2/blog/" + thisBlog + "/post"
-		apiValues := p.GetTumblrApiValues()
-
-		httpContents, err := doApiRequest("POST", apiRequestURL, apiValues)
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(r.Body)
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR! can't read http response body | %v\n", err)
-			os.Exit(1)
+			fmt.Fprintf(os.Stderr, buf.String())
+			panic(err)
 		}
 
-		fmt.Println(string(httpContents))
-		os.Exit(0)
+		fmt.Println(buf.String())
 
 	// update existing posting:
 	// tumblr-cli update <blog> <id> <status> <time>
@@ -154,49 +125,51 @@ func main() {
 	// delete a post
 	// tumblr-cli delete <blog> <id>
 	case "delete":
-		httpContents, err := delete(os.Args[2], os.Args[3])
+		r, err := client.PostWithParams("blog/"+os.Args[2]+"/post/delete", url.Values{"id": []string{os.Args[3]}})
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR! can't read http response body | %v\n", err)
-			os.Exit(1)
+			panic(err)
 		}
 
-		fmt.Println(string(httpContents))
-		os.Exit(0)
+		fmt.Println(string(r.GetBody()))
 
 	// get list of draft posts
-	case "drafts", "posts":
+	case "posts":
+		// [1] posts
+		// [2] <BLOG>
+
 		// BLOG
+		fmt.Println("drafts and posts")
 		thisBlog = os.Args[2]
 
-		// API
-		requestURL := "https://api.tumblr.com/v2/blog/" + thisBlog + "/posts"
-
-		if os.Args[1] == "drafts" {
-			requestURL = requestURL + "/draft"
-		}
-
-		httpContents, err := doApiRequest("GET", requestURL, url.Values{})
+		r, err := client.Get("blog/" + os.Args[2] + "/posts")
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR! can't read http response body | %v\n", err)
-			os.Exit(1)
+			panic(err)
 		}
 
-		fmt.Println(string(httpContents))
+		fmt.Println(string(r.GetBody()))
 		os.Exit(0)
 
 	// get info
 	case "info":
-		httpContents, err := info(os.Args[2])
+		r, err := client.Get("blog/" + os.Args[2] + "/info")
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERROR! API request failed | %v\n", err)
-			os.Exit(1)
+			panic(err)
 		}
 
-		fmt.Println(string(httpContents))
-		os.Exit(0)
+		fmt.Println(string(r.GetBody()))
+
+	// get user info
+	case "user-info":
+		r, err := client.Get("user/info")
+
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Println(string(r.GetBody()))
 
 	// get version
 	case "version":
